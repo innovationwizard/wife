@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Clock, AlertTriangle } from "lucide-react"
+import { Clock } from "lucide-react"
 
 interface AccountabilityItem {
   id: string
@@ -37,10 +37,6 @@ export function AccountabilityView() {
     return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
   }
 
-  function getDaysSinceStatusChange(date: string) {
-    return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
-  }
-
   function getStatusColor(status: string) {
     switch (status) {
       case "DONE":
@@ -56,6 +52,14 @@ export function AccountabilityView() {
       default:
         return "text-slate-500"
     }
+  }
+
+  function formatStatus(status: string) {
+    return status.replace(/_/g, " ")
+  }
+
+  function getDaysInStatus(statusChangedAt: string) {
+    return Math.floor((Date.now() - new Date(statusChangedAt).getTime()) / (1000 * 60 * 60 * 24))
   }
 
   if (loading) {
@@ -108,8 +112,8 @@ export function AccountabilityView() {
       <div className="space-y-3">
         {items.map((item) => {
           const daysSinceCreation = getDaysSince(item.createdAt)
-          const daysSinceStatusChange = getDaysSinceStatusChange(item.statusChangedAt)
-          const isStale = daysSinceStatusChange > 7
+          const daysInStatus = getDaysInStatus(item.statusChangedAt)
+          const formattedStatus = formatStatus(item.status)
 
           return (
             <div
@@ -124,17 +128,13 @@ export function AccountabilityView() {
                   <div className="mt-2 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium ${getStatusColor(item.status)}`}>
-                        {item.status.replace("_", " ")}
+                        Status: {formattedStatus}, since {daysInStatus} {daysInStatus === 1 ? "day" : "days"}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {daysSinceCreation}d since creation
-                      </span>
-                      <span className={`flex items-center gap-1 ${isStale ? "text-amber-600" : ""}`}>
-                        {isStale && <AlertTriangle className="h-3 w-3" />}
-                        {daysSinceStatusChange}d since status change
+                        {daysSinceCreation} {daysSinceCreation === 1 ? "day" : "days"} since creation
                       </span>
                     </div>
                   </div>
