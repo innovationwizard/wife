@@ -65,17 +65,6 @@ export default function LoginPage() {
             Sign In
           </button>
         </form>
-        <p className="space-y-1 text-center text-sm text-gray-600">
-          <span className="block">
-            Creator: jorge@aidev.international / change-this-password
-          </span>
-          <span className="block">
-            Wife: stefani121@gmail.com / change-this-password
-          </span>
-          <span className="block text-xs text-gray-500">
-            Update your password inside the app at Account → Change password.
-          </span>
-        </p>
       </div>
     </div>
   )
