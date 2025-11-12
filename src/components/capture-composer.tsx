@@ -120,28 +120,56 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
     if (!queueRef.current.length) return
 
     syncingRef.current = true
-    const pending = [...queueRef.current].reverse()
+    // Create a snapshot of the queue at the start of sync
+    // This ensures we process all items that were in the queue when sync started
+    const pending = [...queueRef.current]
+    const syncedIds = new Set<string>()
 
     try {
-      for (const entry of pending) {
-        const response = await fetch("/api/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: entry.content })
-        })
+      // Process items in reverse order (oldest first) to maintain chronological order
+      for (let i = pending.length - 1; i >= 0; i--) {
+        const entry = pending[i]
+        if (!entry) continue
 
-        if (!response.ok) {
-          throw new Error("Failed to sync captured idea.")
+        try {
+          const response = await fetch("/api/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: entry.content })
+          })
+
+          if (!response.ok) {
+            console.warn(`Failed to sync item ${entry.id}:`, response.statusText)
+            // Continue with next item instead of stopping
+            continue
+          }
+
+          // Mark as synced only on success
+          syncedIds.add(entry.id)
+        } catch (itemError) {
+          console.warn(`Error syncing item ${entry.id}:`, itemError)
+          // Continue with next item instead of stopping
+          continue
         }
+      }
 
+      // Update state once at the end with all successfully synced items removed
+      // Use functional update to ensure we're working with the latest state
+      // New items added during sync will be preserved
+      if (syncedIds.size > 0) {
         setQueue((prev) => {
-          const next = prev.filter((item) => item.id !== entry.id)
+          // Filter out only the items that were successfully synced
+          // This preserves any new items that were added during sync
+          const next = prev.filter((item) => !syncedIds.has(item.id))
+          // Update ref to match state
           queueRef.current = next
+          console.log(`Synced ${syncedIds.size} item(s), ${next.length} remaining in queue`)
           return next
         })
       }
     } catch (error) {
-      console.warn("Capture sync paused", error)
+      console.warn("Capture sync error:", error)
+      // Individual items are handled in the loop, so this shouldn't happen
     } finally {
       syncingRef.current = false
     }
@@ -388,14 +416,21 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
         createdAt: new Date().toISOString()
       }
 
+      // Update both state and ref synchronously
       setQueue((prev) => {
         const next = [entry, ...prev]
         queueRef.current = next
         return next
       })
 
+      // Only trigger sync if online and not already syncing
+      // If a sync is in progress, the new item will be included in the next sync
       if (typeof navigator === "undefined" || navigator.onLine) {
-        await syncQueue()
+        // Use a small delay to ensure state is committed before syncing
+        // This also allows multiple rapid captures to batch together
+        setTimeout(() => {
+          void syncQueue()
+        }, 50)
       }
     },
     [syncQueue]
