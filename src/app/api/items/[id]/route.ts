@@ -15,9 +15,9 @@ export async function PATCH(
   }
 
   const { id } = await params
-  const { status, type, projectId, routingNotes, title, rawInstructions } = await request.json()
+  const { status, type, projectId, routingNotes, title, rawInstructions, swimlane, order } = await request.json()
 
-  if (!status && !type && typeof projectId === "undefined" && typeof routingNotes === "undefined" && !title && !rawInstructions) {
+  if (!status && !type && typeof projectId === "undefined" && typeof routingNotes === "undefined" && !title && !rawInstructions && !swimlane && typeof order === "undefined") {
     return NextResponse.json(
       { error: "Nothing to update" },
       { status: 400 }
@@ -74,6 +74,14 @@ export async function PATCH(
   if (rawInstructions !== undefined) {
     const cleaned = typeof rawInstructions === "string" ? rawInstructions.trim() : String(rawInstructions).trim()
     data.rawInstructions = cleaned
+  }
+
+  if (swimlane) {
+    data.swimlane = swimlane as Swimlane
+  }
+
+  if (typeof order !== "undefined") {
+    data.order = order === null ? null : (typeof order === "number" ? order : parseInt(String(order), 10))
   }
 
   let item = await prisma.item.update({

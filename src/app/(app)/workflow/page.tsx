@@ -20,6 +20,7 @@ interface Item {
   labels: string[]
   createdAt: string
   statusChangedAt: string
+  order: number | null
 }
 
 interface ColumnConfig {
@@ -76,22 +77,39 @@ export default function WorkflowPage() {
   }
 
   function itemsBy(status: string, swimlane: string) {
-    return items
-      .filter((item) => item.status === status && item.swimlane === swimlane)
-      .sort((a, b) => {
-        const priorityOrder: Record<Item["priority"], number> = {
-          HIGH: 0,
-          MEDIUM: 1,
-          LOW: 2
-        }
-        const priorityDiff =
-          priorityOrder[a.priority] - priorityOrder[b.priority]
-        if (priorityDiff !== 0) return priorityDiff
-        return (
-          new Date(a.statusChangedAt).getTime() -
-          new Date(b.statusChangedAt).getTime()
-        )
-      })
+    const filtered = items.filter((item) => item.status === status && item.swimlane === swimlane)
+
+    return filtered.sort((a, b) => {
+      // Use database order if available (items with order come first, sorted by order)
+      // Items without order (null) come after, sorted by priority/date
+      const aHasOrder = a.order !== null && a.order !== undefined
+      const bHasOrder = b.order !== null && b.order !== undefined
+      
+      if (aHasOrder && bHasOrder) {
+        // Both have order - sort by order
+        return (a.order ?? Infinity) - (b.order ?? Infinity)
+      } else if (aHasOrder && !bHasOrder) {
+        // a has order, b doesn't - a comes first
+        return -1
+      } else if (!aHasOrder && bHasOrder) {
+        // b has order, a doesn't - b comes first
+        return 1
+      }
+      
+      // Neither has order - fallback to priority and date sorting
+      const priorityOrder: Record<Item["priority"], number> = {
+        HIGH: 0,
+        MEDIUM: 1,
+        LOW: 2
+      }
+      const priorityDiff =
+        priorityOrder[a.priority] - priorityOrder[b.priority]
+      if (priorityDiff !== 0) return priorityDiff
+      return (
+        new Date(a.statusChangedAt).getTime() -
+        new Date(b.statusChangedAt).getTime()
+      )
+    })
   }
 
   async function handleDragEnd(result: DropResult) {
@@ -100,11 +118,54 @@ export default function WorkflowPage() {
     setDragError("")
 
     if (!destination) return
-    if (destination.droppableId === source.droppableId) return
 
     const item = items.find((entry) => entry.id === draggableId)
     if (!item) return
 
+    const [sourceStatus, sourceSwimlane] = source.droppableId.split("-")
+    const [destStatus, destSwimlane] = destination.droppableId.split("-")
+
+    // Same column and swimlane - reorder within column
+    if (source.droppableId === destination.droppableId) {
+      const sameColumnItems = itemsBy(sourceStatus, sourceSwimlane)
+      const sourceIndex = source.index
+      const destIndex = destination.index
+
+      if (sourceIndex === destIndex) return
+
+      // Reorder items locally
+      const reordered = Array.from(sameColumnItems)
+      const [removed] = reordered.splice(sourceIndex, 1)
+      reordered.splice(destIndex, 0, removed)
+
+      // Update local state optimistically
+      setItems((prev) => {
+        const otherItems = prev.filter(
+          (entry) => !(entry.status === sourceStatus && entry.swimlane === sourceSwimlane)
+        )
+        return [...otherItems, ...reordered]
+      })
+
+      // Persist order to database - update all items in this column/swimlane
+      try {
+        const updatePromises = reordered.map((item, index) =>
+          fetch(`/api/items/${item.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order: index })
+          })
+        )
+        await Promise.all(updatePromises)
+      } catch (error) {
+        console.error("Failed to persist order", error)
+        // Refresh on error to get correct state
+        await refreshItems()
+      }
+
+      return
+    }
+
+    // Different column - move between columns
     const [nextStatus] = destination.droppableId.split("-")
 
     if (nextStatus === "CREATE") {
@@ -122,7 +183,9 @@ export default function WorkflowPage() {
           ? {
               ...entry,
               status: nextStatus,
-              statusChangedAt: new Date().toISOString()
+              swimlane: destSwimlane as Item["swimlane"],
+              statusChangedAt: new Date().toISOString(),
+              order: null // Clear order when moving between columns
             }
           : entry
       )
@@ -132,7 +195,11 @@ export default function WorkflowPage() {
       const response = await fetch(`/api/items/${draggableId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus })
+        body: JSON.stringify({ 
+          status: nextStatus,
+          swimlane: destSwimlane,
+          order: null // Clear order when moving between columns
+        })
       })
 
       if (!response.ok) {

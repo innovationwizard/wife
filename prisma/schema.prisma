@@ -54,10 +54,14 @@ model Item {
   totalTimeInCreate Int?         @default(0)      // Total minutes in CREATE status
   cycleCount        Int          @default(0)      // Times returned to TODO from CREATE
   
+  // Manual ordering within status/swimlane
+  order             Int?                           // Manual ordering position (lower = first)
+  
   @@index([status, statusChangedAt])              // For freshness queries
   @@index([createdByUserId, createdAt])           // For user's items
   @@index([swimlane, priority])                   // For kanban queries
   @@index([capturedByUserId, createdAt])
+  @@index([status, swimlane, order])              // For manual ordering within columns
 }
 
 model StatusChange {
