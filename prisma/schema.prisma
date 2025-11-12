@@ -13,6 +13,7 @@ model User {
   password      String
   role          Role           @default(CREATOR)
   items         Item[]         @relation("CreatedBy")
+  capturedItems Item[]         @relation("CapturedBy")
   statusChanges StatusChange[] @relation("ChangedBy")
   createdAt     DateTime       @default(now())
 }
@@ -31,11 +32,14 @@ model Item {
   // Relations
   createdByUserId String
   createdBy       User           @relation("CreatedBy", fields: [createdByUserId], references: [id])
+  capturedByUserId String?
+  capturedBy       User?          @relation("CapturedBy", fields: [capturedByUserId], references: [id])
   projectId       String?
   project         Item?          @relation("ProjectItems", fields: [projectId], references: [id])
   subItems        Item[]         @relation("ProjectItems")
   analyses        AIAnalysis[]
   statusHistory   StatusChange[]
+  routingNotes    String?        @db.Text
   
   // Freshness tracking
   createdAt       DateTime       @default(now())
@@ -53,6 +57,7 @@ model Item {
   @@index([status, statusChangedAt])              // For freshness queries
   @@index([createdByUserId, createdAt])           // For user's items
   @@index([swimlane, priority])                   // For kanban queries
+  @@index([capturedByUserId, createdAt])
 }
 
 model StatusChange {

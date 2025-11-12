@@ -4,7 +4,6 @@ import * as bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Create your user
   const hashedPassword = await bcrypt.hash('change-this-password', 10)
   const creator = await prisma.user.upsert({
     where: { email: 'jorgeluiscontrerasherrera@gmail.com' },
@@ -16,7 +15,17 @@ async function main() {
     }
   })
 
-  console.log('Created user:', creator.email)
+  const wife = await prisma.user.upsert({
+    where: { email: 'stefani121@gmail.com' },
+    update: {},
+    create: {
+      email: 'stefani121@gmail.com',
+      password: hashedPassword,
+      role: 'STAKEHOLDER'
+    }
+  })
+
+  console.log('Seed users:', creator.email, wife.email)
 
   // Strategic items from your documents
   const strategicItems = [
@@ -128,6 +137,8 @@ async function main() {
       data: {
         ...itemData,
         createdByUserId: creator.id,
+        capturedByUserId: creator.id,
+        routingNotes: null,
         statusHistory: {
           create: {
             toStatus: itemData.status,
@@ -145,7 +156,8 @@ async function main() {
       { ruleKey: 'WIP_LIMIT', ruleValue: '1', description: 'Only one item in CREATE status allowed' },
       { ruleKey: 'EXPEDITE_MAX_AGE', ruleValue: '24', description: 'Expedite items older than 24 hours trigger warning' },
       { ruleKey: 'STALE_TODO_DAYS', ruleValue: '7', description: 'TODO items older than 7 days are highlighted' },
-    ]
+    ],
+    skipDuplicates: true
   })
 
   console.log('Seeding completed!')

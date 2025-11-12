@@ -1,0 +1,101 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  PenSquare,
+  Filter,
+  Layout as LayoutIcon,
+  Library,
+  Home,
+  LogOut,
+  User
+} from "lucide-react"
+
+const navItems = [
+  { href: "/capture", label: "Capture", icon: PenSquare },
+  { href: "/clean", label: "Clean", icon: Filter },
+  { href: "/workflow", label: "Workflow", icon: LayoutIcon },
+  { href: "/library", label: "Library", icon: Library },
+  { href: "/", label: "Overview", icon: Home }
+]
+
+interface SidebarProps {
+  user?: {
+    email?: string | null
+    role?: string | null
+  }
+}
+
+export function Sidebar({ user }: SidebarProps) {
+  const pathname = usePathname()
+
+  return (
+    <aside className="flex h-screen w-64 flex-col border-r bg-white">
+      <div className="px-6 py-5">
+        <div className="text-sm font-semibold tracking-wide text-slate-500">
+          SSOT
+        </div>
+        <div className="text-lg font-semibold text-slate-900">
+          Single Source of Truth
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-2">
+        <ul className="space-y-1">
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const isActive =
+              href === "/"
+                ? pathname === href
+                : pathname?.startsWith(href)
+
+            return (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className={[
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-slate-100 text-slate-900"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+
+      <div className="border-t px-4 py-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
+            <User className="h-4 w-4 text-slate-500" />
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-slate-900">
+              {user?.email ?? "Signed in"}
+            </div>
+            {user?.role && (
+              <div className="truncate text-xs text-slate-500">
+                {user.role}
+              </div>
+            )}
+          </div>
+        </div>
+        <form action="/api/auth/signout" method="POST" className="mt-4">
+          <button
+            type="submit"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </form>
+      </div>
+    </aside>
+  )
+}
+
