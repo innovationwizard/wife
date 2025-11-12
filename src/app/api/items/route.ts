@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { ItemStatus, Role } from "@prisma/client"
+import { ItemStatus, ItemType, Role } from "@prisma/client"
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
   const payload = await request.json()
   const content = typeof payload?.content === "string" ? payload.content.trim() : ""
   const explicitTitle = typeof payload?.title === "string" ? payload.title.trim() : ""
+  const status = payload?.status as ItemStatus | undefined
+  const type = payload?.type as string | undefined
 
   if (!content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 })
@@ -47,16 +49,20 @@ export async function POST(request: NextRequest) {
       ?.slice(0, 80) ||
     "Captured idea"
 
+  const itemStatus = status || ItemStatus.INBOX
+  const itemType = type === "INFO" ? ItemType.INFO : undefined
+
   const item = await prisma.item.create({
     data: {
       title: derivedTitle,
       rawInstructions: content,
-      status: ItemStatus.INBOX,
+      status: itemStatus,
+      type: itemType,
       createdByUserId: ownerUserId,
       capturedByUserId: sessionUserId,
       statusHistory: {
         create: {
-          toStatus: ItemStatus.INBOX,
+          toStatus: itemStatus,
           changedById: sessionUserId
         }
       }

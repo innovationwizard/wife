@@ -15,9 +15,9 @@ export async function PATCH(
   }
 
   const { id } = await params
-  const { status, type, projectId, routingNotes } = await request.json()
+  const { status, type, projectId, routingNotes, title, rawInstructions } = await request.json()
 
-  if (!status && !type && typeof projectId === "undefined" && typeof routingNotes === "undefined") {
+  if (!status && !type && typeof projectId === "undefined" && typeof routingNotes === "undefined" && !title && !rawInstructions) {
     return NextResponse.json(
       { error: "Nothing to update" },
       { status: 400 }
@@ -58,6 +58,22 @@ export async function PATCH(
           ? null
           : String(routingNotes).trim()
     data.routingNotes = cleaned || null
+  }
+
+  if (title) {
+    const trimmed = typeof title === "string" ? title.trim() : String(title).trim()
+    if (!trimmed) {
+      return NextResponse.json(
+        { error: "Title cannot be empty" },
+        { status: 400 }
+      )
+    }
+    data.title = trimmed
+  }
+
+  if (rawInstructions !== undefined) {
+    const cleaned = typeof rawInstructions === "string" ? rawInstructions.trim() : String(rawInstructions).trim()
+    data.rawInstructions = cleaned
   }
 
   let item = await prisma.item.update({
@@ -225,4 +241,35 @@ export async function PATCH(
   }
 
   return NextResponse.json(item)
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const existing = await prisma.item.findFirst({
+    where: {
+      id,
+      createdByUserId: session.user.id,
+      status: ItemStatus.LIBRARY // Only allow deletion of library items
+    }
+  })
+
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
+  await prisma.item.delete({
+    where: { id }
+  })
+
+  return NextResponse.json({ success: true })
 }
