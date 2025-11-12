@@ -266,6 +266,7 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
         const receivedAudio = hasReceivedAudioRef.current
         
         console.log("Voice recognition ended. Final transcript:", transcript, "| Duration:", recordingDuration, "ms | Has audio:", receivedAudio)
+        console.log("skipClickRef before processing:", skipClickRef.current)
         
         if (transcript) {
           // Add transcript to input field
@@ -274,8 +275,16 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
             console.log("Setting input to:", updated)
             return updated
           })
+          
+          // Reset skipClickRef immediately after transcript is set
+          // This allows the user to click the capture button right away
+          // skipClickRef was set to true in beginVoiceCapture to prevent button release from triggering capture
+          // Now that voice capture is complete and transcript is set, we can reset it
+          skipClickRef.current = false
+          console.log("Voice capture complete, skipClickRef reset to false, ready for next action")
+          
           setVoiceStatus("Transcript captured")
-          // Clear transcript after showing success message
+          // Clear status message after showing success
           setTimeout(() => {
             liveTranscriptRef.current = ""
             setVoiceStatus(null)
@@ -287,15 +296,19 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
           if (recordingDuration >= 500 || receivedAudio) {
             console.warn("No transcript captured in onend, but recording was substantial")
             setVoiceStatus("No speech detected")
-            setTimeout(() => setVoiceStatus(null), 2000)
+            setTimeout(() => {
+              setVoiceStatus(null)
+              // Reset skipClickRef after status clears
+              skipClickRef.current = false
+            }, 2000)
           } else {
             // Very short click - probably accidental, don't show error
             console.log("Short click detected, ignoring")
+            // Reset immediately for accidental clicks
+            skipClickRef.current = false
           }
         }
-        
-        skipClickRef.current = true
-      }, 300) // Increased delay to allow final onresult to process
+      }, 100) // Reduced delay - we don't need to wait as long since onresult already processed the transcript
     }
     
     recognition.onnomatch = () => {
@@ -342,6 +355,21 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
     }
   }, [isOnline, syncQueue])
 
+  // Reset skipClickRef when recording ends and there's text in the input
+  // This ensures the capture button works immediately after voice capture completes
+  useEffect(() => {
+    if (!isRecording && input.trim().length > 0) {
+      // Small delay to ensure voice capture processing is complete
+      const timeoutId = setTimeout(() => {
+        if (!isRecording) {
+          skipClickRef.current = false
+          console.log("Recording ended with text, skipClickRef reset to false")
+        }
+      }, 200)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isRecording, input])
+
   const generateId = () => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID()
@@ -374,13 +402,17 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
   )
 
   const handleCaptureClick = async () => {
-    if (skipClickRef.current) {
-      skipClickRef.current = false
+    // If recording is active, stop recording
+    if (isRecording) {
+      recognitionRef.current?.stop()
       return
     }
 
-    if (isRecording) {
-      recognitionRef.current?.stop()
+    // Skip click only if we're still processing voice capture
+    // Once recording is done, skipClickRef should be reset, but check it anyway
+    if (skipClickRef.current) {
+      console.log("Click skipped - voice capture still processing")
+      skipClickRef.current = false
       return
     }
 
@@ -389,6 +421,13 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
 
     await enqueueCapture(trimmed)
     setInput("")
+  }
+
+  const handleClear = () => {
+    setInput("")
+    liveTranscriptRef.current = ""
+    setVoiceStatus(null)
+    skipClickRef.current = false
   }
 
   const beginVoiceCapture = () => {
@@ -546,6 +585,17 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
             </div>
           )}
         </div>
+
+        {/* Clear button - only show when there's text in the input */}
+        {input.trim().length > 0 && !isRecording && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+          >
+            Clear
+          </button>
+        )}
       </div>
     </div>
   )
