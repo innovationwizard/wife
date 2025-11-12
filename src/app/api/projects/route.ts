@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { Session } from "next-auth"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ItemStatus, ItemType, Priority, Swimlane } from "@prisma/client"
 
-function requireCreator(session: Awaited<ReturnType<typeof auth>>) {
-  if (!session?.user?.id || session.user.role !== "CREATOR") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+type SessionWithRole = Session & {
+  user: {
+    id: string
+    role?: string | null
   }
-  return null
+}
+
+function isCreator(session: SessionWithRole | null): session is SessionWithRole {
+  return Boolean(session?.user?.id && session.user.role === "CREATOR")
 }
 
 export async function GET() {
-  const session = await auth()
-  const forbidden = requireCreator(session)
-  if (forbidden) return forbidden
+  const session = (await auth()) as SessionWithRole | null
+  if (!isCreator(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const projects = await prisma.item.findMany({
     where: {
-      createdByUserId: session!.user!.id,
+      createdByUserId: session.user.id,
       type: ItemType.PROJECT
     },
     orderBy: { createdAt: "asc" },
@@ -33,9 +39,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth()
-  const forbidden = requireCreator(session)
-  if (forbidden) return forbidden
+  const session = (await auth()) as SessionWithRole | null
+  if (!isCreator(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const { title } = await request.json()
 
@@ -62,12 +69,12 @@ export async function POST(request: NextRequest) {
       status: ItemStatus.TODO,
       priority: Priority.MEDIUM,
       swimlane: Swimlane.PROJECT,
-      createdByUserId: session!.user!.id,
-      capturedByUserId: session!.user!.id,
+      createdByUserId: session.user.id,
+      capturedByUserId: session.user.id,
       statusHistory: {
         create: {
           toStatus: ItemStatus.TODO,
-          changedById: session!.user!.id
+          changedById: session.user.id
         }
       }
     },
