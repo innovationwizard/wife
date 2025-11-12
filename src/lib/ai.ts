@@ -5,7 +5,7 @@ const openai = new OpenAI({
 })
 
 const FILER_SYSTEM_PROMPT = `
-You are the "Filer" AI for a personal project management SSOT. Your job is to act as a natural language parser.
+You are the "Filer" AI for a personal project management system (OS - Organization Strategy). Your job is to act as a natural language parser.
 You will be given the human's original Instructions, any supplemental routing notes, the project this item was routed to,
 and the list of all known projects.
 

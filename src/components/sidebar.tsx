@@ -20,7 +20,6 @@ const navItems = [
   { href: "/clean", label: "Clean", icon: Filter },
   { href: "/workflow", label: "Workflow", icon: LayoutIcon },
   { href: "/library", label: "Library", icon: Library },
-  { href: "/account", label: "Account", icon: Settings },
   { href: "/", label: "Overview", icon: Home }
 ]
 
@@ -49,10 +48,10 @@ export function Sidebar({ user }: SidebarProps) {
         </span>
         <div>
           <div className="text-sm font-semibold tracking-wide text-slate-500">
-            SSOT
+            OS
           </div>
           <div className="text-lg font-semibold text-slate-900">
-            Single Source of Truth
+            Organization Strategy
           </div>
         </div>
       </div>
@@ -101,10 +100,22 @@ export function Sidebar({ user }: SidebarProps) {
             )}
           </div>
         </div>
+        <Link
+          href="/account"
+          className={[
+            "mt-4 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+            pathname === "/account"
+              ? "bg-slate-100 text-slate-900"
+              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          ].join(" ")}
+        >
+          <Settings className="h-4 w-4" />
+          Account
+        </Link>
         <button
           type="button"
           onClick={handleSignOut}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900"
         >
           <LogOut className="h-4 w-4" />
           Sign out

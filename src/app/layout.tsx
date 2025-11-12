@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 
-const title = "SSOT – Single Source of Truth"
+const title = "OS – Organization Strategy"
 const description = "AI-powered capture, routing, and kanban intelligence."
 const imageUrl = "/og-brain.svg"
 const iconUrl = "/brain.svg"
@@ -18,13 +18,13 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    siteName: "SSOT",
+    siteName: "OS",
     images: [
       {
         url: imageUrl,
         width: 1200,
         height: 630,
-        alt: "SSOT – Single Source of Truth"
+        alt: "OS – Organization Strategy"
       }
     ],
     type: "website"

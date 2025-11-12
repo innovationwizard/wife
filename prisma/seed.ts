@@ -63,8 +63,8 @@ async function main() {
     
     // Active Projects
     {
-      title: "SSOT Development",
-      rawInstructions: "Build the Single Source of Truth system. Multi-user, AI-powered task management. Currently in Phase 0.",
+      title: "OS Development",
+      rawInstructions: "Build the Organization Strategy system. Multi-user, AI-powered task management. Currently in Phase 0.",
       type: ItemType.PROJECT,
       status: ItemStatus.CREATE,
       priority: Priority.HIGH,
