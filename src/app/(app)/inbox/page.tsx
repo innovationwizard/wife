@@ -33,9 +33,15 @@ export default function InboxPage() {
         throw new Error("Failed to load inbox")
       }
       const data: InboxItem[] = await response.json()
+      console.log(`[Inbox] Fetched ${data.length} items from server:`, data.map(item => ({
+        id: item.id,
+        title: item.title,
+        capturedBy: item.capturedBy?.email,
+        createdAt: item.createdAt
+      })))
       setItems(data)
     } catch (error) {
-      console.error(error)
+      console.error("[Inbox] Error fetching items:", error)
     } finally {
       setLoading(false)
     }
@@ -61,7 +67,9 @@ export default function InboxPage() {
         throw new Error("Failed to archive item")
       }
 
-      setItems((prev) => prev.slice(1))
+      // Refetch items from server to get the latest state
+      // This ensures we see all items, including any new ones added while processing
+      await fetchItems()
     } catch (error) {
       console.error(error)
     } finally {
@@ -166,10 +174,44 @@ export default function InboxPage() {
         </section>
 
         {items.length > 1 && (
-          <p className="text-xs text-slate-400">
-            {items.length - 1} additional item
-            {items.length - 1 === 1 ? "" : "s"} waiting in inbox.
-          </p>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold text-slate-600">
+              {items.length - 1} additional item
+              {items.length - 1 === 1 ? "" : "s"} waiting in inbox:
+            </p>
+            <ul className="space-y-1 text-xs text-slate-500">
+              {items.slice(1, 6).map((item) => (
+                <li key={item.id} className="flex items-center justify-between">
+                  <span className="truncate">{item.title}</span>
+                  <span className="ml-2 text-slate-400">
+                    {item.capturedBy?.email ? `by ${item.capturedBy.email.split("@")[0]}` : "by Creator"}
+                  </span>
+                </li>
+              ))}
+              {items.length > 6 && (
+                <li className="text-slate-400">
+                  ...and {items.length - 6} more
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+        
+        {/* Debug info - remove after debugging */}
+        {process.env.NODE_ENV === "development" && (
+          <details className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs">
+            <summary className="cursor-pointer font-semibold text-slate-600">
+              Debug: All items ({items.length})
+            </summary>
+            <pre className="mt-2 overflow-auto text-xs text-slate-500">
+              {JSON.stringify(items.map(item => ({
+                id: item.id,
+                title: item.title,
+                capturedBy: item.capturedBy?.email,
+                createdAt: item.createdAt
+              })), null, 2)}
+            </pre>
+          </details>
         )}
       </div>
     </div>

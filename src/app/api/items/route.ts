@@ -77,13 +77,15 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status")
   const capturedBy = searchParams.get("capturedBy")
 
+  const whereClause = {
+    ...(capturedBy === "me"
+      ? { capturedByUserId: session.user.id }
+      : { createdByUserId: session.user.id }),
+    ...(status && { status: status as ItemStatus })
+  }
+
   const items = await prisma.item.findMany({
-    where: {
-      ...(capturedBy === "me"
-        ? { capturedByUserId: session.user.id }
-        : { createdByUserId: session.user.id }),
-      ...(status && { status: status as ItemStatus })
-    },
+    where: whereClause,
     orderBy: { createdAt: "desc" },
     include: {
       capturedBy: {
@@ -91,6 +93,11 @@ export async function GET(request: NextRequest) {
       }
     }
   })
+
+  console.log(`[GET /api/items] Found ${items.length} items for user ${session.user.id}, status: ${status || "all"}, capturedBy: ${capturedBy || "all"}`)
+  if (items.length > 0) {
+    console.log(`[GET /api/items] Sample item IDs:`, items.slice(0, 3).map(item => ({ id: item.id, title: item.title, capturedBy: item.capturedBy?.email, createdAt: item.createdAt })))
+  }
 
   return NextResponse.json(items)
 }
