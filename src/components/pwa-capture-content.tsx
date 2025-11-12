@@ -11,17 +11,17 @@ export function PWACaptureContent() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header with navigation and logout button */}
-      <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-6">
-        <h1 className="text-lg font-semibold text-slate-900">
-          {showAccountability ? "My Submissions" : "Capture"}
+      <header className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 sm:px-6">
+        <h1 className="min-w-0 text-base font-semibold text-slate-900 sm:text-lg">
+          {showAccountability ? "Follow Up" : "Command Center"}
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setShowAccountability(!showAccountability)}
-            className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+            className="flex items-center gap-2 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:px-3 sm:text-sm"
           >
-            {showAccountability ? "Capture" : "My Submissions"}
+            {showAccountability ? "Command Center" : "Follow Up"}
           </button>
           <form action="/api/auth/signout" method="POST">
             <button

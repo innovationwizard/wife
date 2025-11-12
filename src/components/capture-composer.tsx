@@ -543,11 +543,11 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
     <div className={layoutStyles}>
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Step 1 · Capture
+          {variant === "pwa" ? "Step 1: Write your command" : "Step 1 · Capture"}
         </p>
         <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
           {variant === "pwa"
-            ? "Capture quickly"
+            ? "Command: "
             : "Get it out of your head"}
         </h1>
         {variant === "full" && (
@@ -562,7 +562,7 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
         <textarea
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="What should we remember?"
+          placeholder={variant === "pwa" ? "What should your husband remember to do? " : "What should we remember?"}
           rows={variant === "pwa" ? 5 : 6}
           className={textareaClasses}
         />
@@ -588,7 +588,9 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
 
       {voiceSupported ? (
         <p className="text-xs text-slate-400">
-          Hold the button to dictate. Release to save the transcript.
+          {variant === "pwa"
+            ? "Hold the button to dictate your command. Release to generate the transcript."
+            : "Hold the button to dictate. Release to save the transcript."}
         </p>
       ) : (
         <p className="text-xs text-slate-400">
@@ -608,8 +610,8 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
           {isRecording
             ? "Listening…"
             : input.trim()
-              ? "Capture"
-              : "Hold to capture voice"}
+              ? (variant === "pwa" ? "Click, and it shall be done!" : "Capture")
+              : (variant === "pwa" ? "Your command, milady?" : "Hold to capture voice")}
         </button>
 
         {/* Status message container with fixed min-height to prevent layout shift */}
