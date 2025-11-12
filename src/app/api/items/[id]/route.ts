@@ -193,7 +193,7 @@ export async function PATCH(
           Conflict: AnalysisType.CONFLICT,
           Dependency: AnalysisType.DEPENDENCY,
           Redundancy: AnalysisType.REDUNDANCY,
-          Relation: AnalysisType.RELATION,
+          Relation: AnalysisType.RELATED,
           Suggestion: AnalysisType.SUGGESTION
         }
 
