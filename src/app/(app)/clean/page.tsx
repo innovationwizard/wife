@@ -91,11 +91,20 @@ export default function CleanPage() {
       const projectTitle =
         projects.find((project) => project.id === projectId)?.title ?? "project"
 
-      setConfirmation(`Routed to ${projectTitle}`)
-      setItems((prev) => prev.slice(1))
+      setConfirmation(`Routed to ${projectTitle}. AI Filer is processing...`)
       setInstructions("")
+      
+      // Refetch items from server to get the actual current state
+      // The item's status may have changed from INBOX to TODO or ON_HOLD
+      await fetchItems()
+      
+      // Clear confirmation after a short delay
+      setTimeout(() => {
+        setConfirmation(null)
+      }, 3000)
     } catch (error) {
       console.error(error)
+      setConfirmation(null)
     } finally {
       setAssigning(false)
     }

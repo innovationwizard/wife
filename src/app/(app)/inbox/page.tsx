@@ -33,12 +33,21 @@ export default function InboxPage() {
         throw new Error("Failed to load inbox")
       }
       const data: InboxItem[] = await response.json()
-      console.log(`[Inbox] Fetched ${data.length} items from server:`, data.map(item => ({
+      console.log(`[Inbox] Fetched ${data.length} items from server`)
+      console.log(`[Inbox] All items:`, data.map(item => ({
         id: item.id,
         title: item.title,
         capturedBy: item.capturedBy?.email,
-        createdAt: item.createdAt
+        createdAt: item.createdAt,
+        status: 'INBOX' // All items should be INBOX since we filter by status=INBOX
       })))
+      
+      if (data.length === 0) {
+        console.warn(`[Inbox] No items found! This might indicate items were processed or there's a query issue.`)
+      } else if (data.length === 1) {
+        console.warn(`[Inbox] Only 1 item found. If more were captured, they may have been processed or there's a filtering issue.`)
+      }
+      
       setItems(data)
     } catch (error) {
       console.error("[Inbox] Error fetching items:", error)
@@ -197,13 +206,21 @@ export default function InboxPage() {
           </div>
         )}
         
-        {/* Debug info - remove after debugging */}
-        {process.env.NODE_ENV === "development" && (
-          <details className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs">
-            <summary className="cursor-pointer font-semibold text-slate-600">
-              Debug: All items ({items.length})
-            </summary>
-            <pre className="mt-2 overflow-auto text-xs text-slate-500">
+        {/* Debug info - show in production to help diagnose missing items */}
+        <details className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs">
+          <summary className="cursor-pointer font-semibold text-slate-600">
+            Debug: All INBOX items ({items.length})
+          </summary>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-slate-500">
+              Showing items with status=INBOX. If you expected more items, they may have been processed.
+            </p>
+            {items.length === 0 && (
+              <p className="text-xs text-amber-600 font-medium">
+                ⚠️ No items in INBOX. Check Workflow page or Library to see where items went.
+              </p>
+            )}
+            <pre className="overflow-auto text-xs text-slate-500 max-h-40">
               {JSON.stringify(items.map(item => ({
                 id: item.id,
                 title: item.title,
@@ -211,10 +228,85 @@ export default function InboxPage() {
                 createdAt: item.createdAt
               })), null, 2)}
             </pre>
-          </details>
-        )}
+          </div>
+        </details>
+        
+        {/* Check all items regardless of status */}
+        <AllItemsDiagnostic />
       </div>
     </div>
+  )
+}
+
+// Diagnostic component to check all items
+function AllItemsDiagnostic() {
+  const [allItems, setAllItems] = useState<Array<{ id: string; title: string; status: string; capturedBy?: { email: string | null } | null; createdAt: string }>>([])
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    if (expanded && !loading && allItems.length === 0) {
+      void fetchAllItems()
+    }
+  }, [expanded])
+
+  async function fetchAllItems() {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/items", { cache: "no-store" })
+      if (!response.ok) return
+      const data = await response.json()
+      setAllItems(data)
+    } catch (error) {
+      console.error("Failed to fetch all items", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const itemsByStatus = allItems.reduce((acc, item) => {
+    const status = item.status || "UNKNOWN"
+    if (!acc[status]) acc[status] = []
+    acc[status].push(item)
+    return acc
+  }, {} as Record<string, typeof allItems>)
+
+  return (
+    <details 
+      className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs"
+      onToggle={(e) => setExpanded((e.target as HTMLDetailsElement).open)}
+    >
+      <summary className="cursor-pointer font-semibold text-amber-700">
+        🔍 Diagnostic: Check ALL items (all statuses) - {loading ? "Loading..." : allItems.length > 0 ? `${allItems.length} total` : "Click to load"}
+      </summary>
+      <div className="mt-2 space-y-2">
+        {loading ? (
+          <p className="text-xs text-amber-600">Loading all items...</p>
+        ) : allItems.length === 0 && expanded ? (
+          <p className="text-xs text-amber-600">No items found. This might indicate a database issue.</p>
+        ) : (
+          <div className="space-y-3">
+            {Object.entries(itemsByStatus).map(([status, statusItems]) => (
+              <div key={status} className="rounded border border-amber-200 bg-white p-2">
+                <p className="font-semibold text-amber-700">
+                  {status}: {statusItems.length} item{statusItems.length !== 1 ? "s" : ""}
+                </p>
+                <ul className="mt-1 space-y-1 text-xs text-slate-600">
+                  {statusItems.slice(0, 5).map((item) => (
+                    <li key={item.id} className="truncate">
+                      • {item.title} {item.capturedBy?.email ? `(by ${item.capturedBy.email.split("@")[0]})` : ""} - {new Date(item.createdAt).toLocaleString()}
+                    </li>
+                  ))}
+                  {statusItems.length > 5 && (
+                    <li className="text-slate-400">...and {statusItems.length - 5} more</li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
   )
 }
 

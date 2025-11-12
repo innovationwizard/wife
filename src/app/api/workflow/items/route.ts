@@ -5,6 +5,7 @@ import { ItemStatus } from "@prisma/client"
 
 const WORKFLOW_STATUSES = [
   ItemStatus.TODO,
+  ItemStatus.ON_HOLD,
   ItemStatus.CREATE,
   ItemStatus.IN_REVIEW,
   ItemStatus.BLOCKED,

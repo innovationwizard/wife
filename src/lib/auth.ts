@@ -4,7 +4,8 @@ import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET,  
+  secret: process.env.AUTH_SECRET,
+  trustHost: true, // Required for Vercel/production environments - handles host detection automatically
   providers: [
     Credentials({
       credentials: {
@@ -38,6 +39,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login"
   },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
     async session({ session, token }) {
       if (session?.user && token?.sub) {
@@ -51,6 +56,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = user.role
       }
       return token
-    }
+    },
   }
 })

@@ -1,41 +1,97 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    // Check for error in URL (e.g., MissingCSRF from NextAuth)
+    // If error is MissingCSRF, it means login actually succeeded but NextAuth
+    // redirected back with an error. Check if user is logged in and redirect.
+    const urlError = searchParams.get("error")
+    if (urlError === "MissingCSRF") {
+      // Clear the error from URL
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", "/login")
+      }
+      
+      // Check if user is actually logged in (login succeeded despite the error)
+      fetch("/api/auth/session", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((session) => {
+          if (session?.user) {
+            // User is logged in - redirect based on role
+            if (session.user.role === "STAKEHOLDER") {
+              router.push("/pwa/capture")
+            } else {
+              router.push("/")
+            }
+          }
+        })
+        .catch(() => {
+          // If session check fails, just leave them on login page
+        })
+    } else if (urlError) {
+      setError("An error occurred. Please try again.")
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", "/login")
+      }
+    }
+  }, [searchParams, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false
-    })
+    setError("")
+    setIsSubmitting(true)
 
-    if (result?.error) {
-      setError("Invalid credentials")
-    } else {
-      // Wait a moment for session to be set, then fetch
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      
-      const sessionResponse = await fetch("/api/auth/session", {
-        cache: "no-store"
+    try {
+      // Determine redirect URL based on user role
+      // We'll get the session after sign-in to determine where to redirect
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: "/", // Default, we'll override after checking session
       })
-      const session = await sessionResponse.json()
-      
-      // Redirect stakeholders to PWA capture, creators to dashboard
-      if (session?.user?.role === "STAKEHOLDER") {
-        router.push("/pwa/capture")
-      } else {
-        router.push("/")
+
+      if (result?.error) {
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid email or password")
+        } else if (result.error === "MissingCSRF") {
+          // This shouldn't happen, but if it does, try again
+          setError("Security error: Please try again.")
+        } else {
+          setError("Login failed. Please try again.")
+        }
+      } else if (result?.ok) {
+        // Success - get session to determine redirect
+        const sessionResponse = await fetch("/api/auth/session", {
+          cache: "no-store",
+        })
+        const session = await sessionResponse.json()
+
+        // Redirect based on user role
+        if (session?.user?.role === "STAKEHOLDER") {
+          router.push("/pwa/capture")
+        } else {
+          router.push("/")
+        }
+        // Don't set isSubmitting to false here since we're redirecting
+        return
       }
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("An unexpected error occurred. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -56,6 +112,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <input
               type="email"
+              name="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
@@ -64,6 +121,7 @@ export default function LoginPage() {
             />
             <input
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
@@ -73,9 +131,10 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            disabled={isSubmitting}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Log In
+            {isSubmitting ? "Logging in..." : "Log In"}
           </button>
         </form>
       </div>

@@ -4,23 +4,35 @@ import * as bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('change-this-password', 10)
+  // Passwords for seed users - change these as needed
+  const creatorPassword = 'x'
+  const stakeholderPassword = '2122'
+  
+  const hashedCreatorPassword = await bcrypt.hash(creatorPassword, 10)
+  const hashedStakeholderPassword = await bcrypt.hash(stakeholderPassword, 10)
+  
   const creator = await prisma.user.upsert({
     where: { email: 'jorgeluiscontrerasherrera@gmail.com' },
-    update: {},
+    update: {
+      password: hashedCreatorPassword,
+      role: 'CREATOR'
+    },
     create: {
       email: 'jorgeluiscontrerasherrera@gmail.com',
-      password: hashedPassword,
+      password: hashedCreatorPassword,
       role: 'CREATOR'
     }
   })
 
   const wife = await prisma.user.upsert({
     where: { email: 'stefani121@gmail.com' },
-    update: {},
+    update: {
+      password: hashedStakeholderPassword,
+      role: 'STAKEHOLDER'
+    },
     create: {
       email: 'stefani121@gmail.com',
-      password: hashedPassword,
+      password: hashedStakeholderPassword,
       role: 'STAKEHOLDER'
     }
   })
