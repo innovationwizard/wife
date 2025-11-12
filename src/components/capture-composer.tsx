@@ -497,26 +497,31 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
         </p>
       )}
 
-      {voiceStatus && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          {voiceStatus}
-        </div>
-      )}
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={handleCaptureClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
+          className={buttonClasses}
+        >
+          {isRecording
+            ? "Listening…"
+            : input.trim()
+              ? "Capture"
+              : "Hold to capture voice"}
+        </button>
 
-      <button
-        type="button"
-        onClick={handleCaptureClick}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
-        className={buttonClasses}
-      >
-        {isRecording
-          ? "Listening…"
-          : input.trim()
-            ? "Capture"
-            : "Hold to capture voice"}
-      </button>
+        {/* Status message container with fixed min-height to prevent layout shift */}
+        <div className="min-h-[48px]">
+          {voiceStatus && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              {voiceStatus}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
