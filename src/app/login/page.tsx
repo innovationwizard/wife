@@ -22,7 +22,20 @@ export default function LoginPage() {
     if (result?.error) {
       setError("Invalid credentials")
     } else {
-      router.push("/")
+      // Wait a moment for session to be set, then fetch
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      
+      const sessionResponse = await fetch("/api/auth/session", {
+        cache: "no-store"
+      })
+      const session = await sessionResponse.json()
+      
+      // Redirect stakeholders to PWA capture, creators to dashboard
+      if (session?.user?.role === "STAKEHOLDER") {
+        router.push("/pwa/capture")
+      } else {
+        router.push("/")
+      }
     }
   }
 
