@@ -129,7 +129,7 @@ export async function PATCH(
       toStatus: ItemStatus
       changedById: string
       userFeedback?: Feedback
-      userCorrection?: unknown
+      userCorrection?: Prisma.InputJsonValue
     } = {
       itemId: item.id,
       fromStatus: existing.status,
@@ -146,7 +146,7 @@ export async function PATCH(
     }
 
     await prisma.statusChange.create({
-      data: statusChangeData as any
+      data: statusChangeData
     })
   }
 
