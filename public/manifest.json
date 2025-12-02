@@ -9,13 +9,49 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/message-circle-heart.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/brain.svg",
+      "src": "/apple-touch-icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon-167x167.png",
+      "sizes": "167x167",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon-120x120.png",
+      "sizes": "120x120",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon-76x76.png",
+      "sizes": "76x76",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon-60x60.png",
+      "sizes": "60x60",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/message-circle-heart.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -29,7 +65,7 @@
       "short_name": "Capture",
       "description": "Quick capture your ideas",
       "url": "/pwa/capture",
-      "icons": [{ "src": "/message-circle-heart.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/apple-touch-icon-180x180.png", "sizes": "180x180", "type": "image/png" }]
     }
   ]
 }
