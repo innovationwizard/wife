@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           {
             role: "assistant",
             content: JSON.stringify({
-              ...decision.action,
+              ...(decision.action as Record<string, unknown>),
               reasoning: decision.reasoning
             })
           }
