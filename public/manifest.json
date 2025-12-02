@@ -29,7 +29,7 @@
       "short_name": "Capture",
       "description": "Quick capture your ideas",
       "url": "/pwa/capture",
-      "icons": [{ "src": "/brain.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/message-circle-heart.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }
