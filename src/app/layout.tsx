@@ -4,17 +4,23 @@ import { Providers } from "@/components/providers"
 
 const title = "OCD – Opus Corpus Documenter"
 const description = "AI-powered capture, routing, and kanban intelligence."
-const imageUrl = "/og-brain.svg"
-const iconUrl = "/brain.svg"
+const imageUrl = "/og-image.png"
+const iconUrl = "/favicon-32x32.png"
 
 export const metadata: Metadata = {
   title,
   description,
   manifest: "/manifest.json",
   icons: {
-    icon: iconUrl,
-    shortcut: iconUrl,
-    apple: iconUrl
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon-32x32.png",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
