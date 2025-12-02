@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"
-import { AgentType, Feedback, ItemStatus, Swimlane, Priority } from "@prisma/client"
+import { AgentType, Feedback, ItemStatus, Swimlane, Priority, Prisma } from "@prisma/client"
 import type { Decision } from "@prisma/client"
 import {
   FilerRewardComponents,
@@ -8,6 +8,11 @@ import {
   StorerRewardComponents,
   RetrieverRewardComponents
 } from "./agent-schemas"
+
+// Type for Decision with item relation included
+type DecisionWithItem = Prisma.DecisionGetPayload<{
+  include: { item: true }
+}>
 
 /**
  * Reward weights for each agent and component
@@ -182,7 +187,7 @@ async function getStrategicGoalProgress(userId: string): Promise<{
  * Calculate Filer reward components
  */
 async function calculateFilerRewardComponents(
-  decision: Decision
+  decision: DecisionWithItem
 ): Promise<FilerRewardComponents> {
   const components: FilerRewardComponents = {
     immediate: {
@@ -535,7 +540,7 @@ export async function calculateReward(decisionId: string): Promise<number> {
 /**
  * Main reward calculation function
  */
-export async function calculateRewardForDecision(decision: Decision): Promise<{
+export async function calculateRewardForDecision(decision: DecisionWithItem): Promise<{
   reward: number
   components: Record<string, unknown>
 }> {
@@ -546,16 +551,16 @@ export async function calculateRewardForDecision(decision: Decision): Promise<{
       components = await calculateFilerRewardComponents(decision)
       break
     case AgentType.LIBRARIAN:
-      components = await calculateLibrarianRewardComponents(decision)
+      components = await calculateLibrarianRewardComponents(decision as Decision)
       break
     case AgentType.PRIORITIZER:
-      components = await calculatePrioritizerRewardComponents(decision)
+      components = await calculatePrioritizerRewardComponents(decision as Decision)
       break
     case AgentType.STORER:
-      components = await calculateStorerRewardComponents(decision)
+      components = await calculateStorerRewardComponents(decision as Decision)
       break
     case AgentType.RETRIEVER:
-      components = await calculateRetrieverRewardComponents(decision)
+      components = await calculateRetrieverRewardComponents(decision as Decision)
       break
     default:
       components = {}
