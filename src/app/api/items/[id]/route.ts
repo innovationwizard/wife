@@ -160,7 +160,8 @@ export async function PATCH(
             id: true,
             name: true,
             content: true,
-            opusType: true
+            opusType: true,
+            isStrategic: true
           }
         })
       : null
