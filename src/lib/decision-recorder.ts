@@ -312,12 +312,12 @@ export function calculateStorerReward(
   }
 
   // δ₂ * corpus_coherence (simplified - would need semantic analysis)
-  if (outcomeMetrics.corpusCoherence) {
+  if (outcomeMetrics.corpusCoherence && typeof outcomeMetrics.corpusCoherence === "number") {
     components.coherence = delta2 * outcomeMetrics.corpusCoherence
   }
 
   // δ₃ * findability
-  if (outcomeMetrics.findability) {
+  if (outcomeMetrics.findability && typeof outcomeMetrics.findability === "number") {
     components.findability = delta3 * outcomeMetrics.findability
   }
 
@@ -361,12 +361,12 @@ export function calculateRetrieverReward(
   }
 
   // ε₂ * accuracy
-  if (outcomeMetrics.accuracy) {
+  if (outcomeMetrics.accuracy && typeof outcomeMetrics.accuracy === "number") {
     components.accuracy = epsilon2 * outcomeMetrics.accuracy
   }
 
   // ε₃ * completeness
-  if (outcomeMetrics.completeness) {
+  if (outcomeMetrics.completeness && typeof outcomeMetrics.completeness === "number") {
     components.completeness = epsilon3 * outcomeMetrics.completeness
   }
 
