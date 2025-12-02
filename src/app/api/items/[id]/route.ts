@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { ItemStatus, ItemType, Priority, Swimlane, AnalysisType, OpusType, Feedback } from "@prisma/client"
 import { callAIFiler, callAILibrarian } from "@/lib/ai"
 import { recordDecision, type DecisionState, type DecisionAction } from "@/lib/decision-recorder"
@@ -141,11 +142,11 @@ export async function PATCH(
     }
 
     if (userCorrection) {
-      statusChangeData.userCorrection = userCorrection
+      statusChangeData.userCorrection = userCorrection as Prisma.InputJsonValue
     }
 
     await prisma.statusChange.create({
-      data: statusChangeData
+      data: statusChangeData as any
     })
   }
 
