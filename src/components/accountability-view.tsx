@@ -67,14 +67,12 @@ export function AccountabilityView() {
     switch (status) {
       case "DONE":
         return "text-emerald-600"
-      case "CREATING":
+      case "DOING":
         return "text-blue-600"
       case "TODO":
         return "text-slate-600"
       case "INBOX":
         return "text-amber-600"
-      case "ON_HOLD":
-        return "text-yellow-600"
       default:
         return "text-slate-500"
     }

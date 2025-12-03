@@ -4,9 +4,9 @@ import { prisma } from "@/lib/prisma"
 import { ItemStatus } from "@prisma/client"
 
 const WORKFLOW_STATUSES = [
+  ItemStatus.BACKLOG,
   ItemStatus.TODO,
-  ItemStatus.ON_HOLD,
-  ItemStatus.CREATING,
+  ItemStatus.DOING,
   ItemStatus.IN_REVIEW,
   ItemStatus.BLOCKED,
   ItemStatus.DONE
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       humanId: true,
       title: true,
       rawInstructions: true,
+      notes: true,
       status: true,
       priority: true,
       swimlane: true,
@@ -38,28 +39,9 @@ export async function GET(request: NextRequest) {
       createdAt: true,
       statusChangedAt: true,
       order: true,
-      opusId: true,
       createdBy: {
         select: {
           name: true
-        }
-      },
-      statusHistory: {
-        where: {
-          aiReasoning: {
-            not: null
-          }
-        },
-        orderBy: {
-          changedAt: 'desc'
-        },
-        take: 1,
-        select: {
-          id: true,
-          aiReasoning: true,
-          aiConfidence: true,
-          userFeedback: true,
-          userCorrection: true
         }
       }
     },

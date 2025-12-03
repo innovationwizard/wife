@@ -7,25 +7,14 @@ import {
   Draggable,
   type DropResult
 } from "@hello-pangea/dnd"
-import { AlertTriangle, Clock, Sparkles } from "lucide-react"
-import { AIDecisionFeedback } from "@/components/ai-decision-feedback"
-import { AIPrioritizerModal } from "@/components/ai-prioritizer-modal"
-import { AIStorerModal } from "@/components/ai-storer-modal"
-import { Feedback } from "@prisma/client"
-
-interface StatusChange {
-  id: string
-  aiReasoning: string | null
-  aiConfidence: number | null
-  userFeedback: string | null
-  userCorrection: unknown
-}
+import { AlertTriangle, Clock } from "lucide-react"
 
 interface Item {
   id: string
   humanId: string
   title: string
   rawInstructions: string
+  notes?: string | null
   status: string
   priority: "HIGH" | "MEDIUM" | "LOW"
   swimlane: string
@@ -33,8 +22,6 @@ interface Item {
   createdAt: string
   statusChangedAt: string
   order: number | null
-  opusId: string | null
-  statusHistory?: StatusChange[]
 }
 
 interface ColumnConfig {
@@ -44,16 +31,16 @@ interface ColumnConfig {
 }
 
 const COLUMNS: Record<string, ColumnConfig> = {
-  ON_HOLD: { title: "On Hold", color: "bg-slate-200" },
-  BLOCKED: { title: "Blocked", color: "bg-rose-100" },
+  BACKLOG: { title: "Backlog", color: "bg-slate-200" },
   TODO: { title: "To Do", color: "bg-slate-100" },
-  CREATING: { title: "Doing", color: "bg-blue-100", wipLimit: 1 },
-  IN_REVIEW: { title: "Testing", color: "bg-amber-100" },
+  DOING: { title: "Doing", color: "bg-blue-100", wipLimit: 1 },
+  IN_REVIEW: { title: "In Review", color: "bg-amber-100" },
+  BLOCKED: { title: "Blocked", color: "bg-rose-100" },
   DONE: { title: "Done", color: "bg-emerald-100" }
 }
 
 // Column order from left to right
-const COLUMN_ORDER = ["ON_HOLD", "BLOCKED", "TODO", "CREATING", "IN_REVIEW", "DONE"]
+const COLUMN_ORDER = ["BACKLOG", "TODO", "DOING", "IN_REVIEW", "BLOCKED", "DONE"]
 
 const SWIMLANES = ["EXPEDITE", "PROJECT", "HABIT", "HOME"]
 
@@ -67,18 +54,9 @@ export default function WorkflowPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [dragError, setDragError] = useState("")
-  const [showPrioritizer, setShowPrioritizer] = useState(false)
-  const [showStorer, setShowStorer] = useState(false)
-  const [storerItem, setStorerItem] = useState<Item | null>(null)
-  const [session, setSession] = useState<{ user: { id: string } } | null>(null)
 
   useEffect(() => {
     refreshItems()
-    // Get session for user ID
-    fetch("/api/auth/session")
-      .then(res => res.json())
-      .then(data => setSession(data))
-      .catch(console.error)
   }, [])
 
   async function refreshItems() {
@@ -191,7 +169,7 @@ export default function WorkflowPage() {
     }
 
     // Different column - move between columns
-    // Parse droppableId: format is "STATUS-SWIMLANE" (e.g., "CREATING-EXPEDITE", "DONE-PROJECT")
+    // Parse droppableId: format is "STATUS-SWIMLANE" (e.g., "DOING-EXPEDITE", "DONE-PROJECT")
     // For statuses with underscores like "IN_REVIEW", we need to handle splitting correctly
     const destParts = destination.droppableId.split("-")
     // Status is everything except the last part (swimlane)
@@ -206,10 +184,10 @@ export default function WorkflowPage() {
       itemId: draggableId
     })
 
-    if (nextStatus === "CREATING") {
-      const inCreate = items.filter((entry) => entry.status === "CREATING")
-      if (inCreate.length >= 1) {
-        setDragError("Only one item can be in Create at a time.")
+    if (nextStatus === "DOING") {
+      const inDoing = items.filter((entry) => entry.status === "DOING")
+      if (inDoing.length >= 1) {
+        setDragError("Only one item can be in Doing at a time.")
         setTimeout(() => setDragError(""), 3000)
         return
       }
@@ -248,24 +226,6 @@ export default function WorkflowPage() {
         await refreshItems()
       } else {
         console.log("[Workflow] Successfully moved item to", nextStatus)
-        
-        // If moved to DONE, show Storer modal for integration
-        if (nextStatus === "DONE") {
-          // Get the updated item from the response
-          const responseData = await response.json().catch(() => null)
-          if (responseData && responseData.opusId) {
-            setStorerItem(responseData as Item)
-            setShowStorer(true)
-          } else {
-            // Fallback: refresh and check
-            await refreshItems()
-            const updatedItem = items.find(item => item.id === draggableId)
-            if (updatedItem && updatedItem.opusId) {
-              setStorerItem(updatedItem)
-              setShowStorer(true)
-            }
-          }
-        }
       }
     } catch (error) {
       console.error("[Workflow] Failed to update item", error)
@@ -285,23 +245,6 @@ export default function WorkflowPage() {
     )
   }
 
-  const todoItems = items.filter(item => item.status === "TODO")
-  const handleAcceptRecommendation = async (itemId: string) => {
-    // Move recommended item to CREATING
-    try {
-      const response = await fetch(`/api/items/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CREATING" })
-      })
-      if (response.ok) {
-        await refreshItems()
-      }
-    } catch (error) {
-      console.error("Failed to move item to CREATING:", error)
-    }
-  }
-
   return (
     <div className="flex h-full flex-col">
       <header className="border-b border-slate-200 bg-white px-8 py-5">
@@ -314,15 +257,6 @@ export default function WorkflowPage() {
               </p>
             )}
           </div>
-          {todoItems.length > 0 && (
-            <button
-              onClick={() => setShowPrioritizer(true)}
-              className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              <Sparkles className="h-4 w-4" />
-              AI: Suggest Next Task
-            </button>
-          )}
         </div>
       </header>
 
@@ -416,25 +350,10 @@ export default function WorkflowPage() {
                                         ))}
                                       </div>
                                     )}
-                                    {item.statusHistory && item.statusHistory.length > 0 && (
-                                      <AIDecisionFeedback
-                                        itemId={item.id}
-                                        statusChangeId={item.statusHistory[0].id}
-                                        aiReasoning={item.statusHistory[0].aiReasoning}
-                                        aiConfidence={item.statusHistory[0].aiConfidence}
-                                        currentSwimlane={item.swimlane}
-                                        currentPriority={item.priority}
-                                        currentLabels={item.labels}
-                                        userFeedback={item.statusHistory[0].userFeedback as Feedback | null}
-                                        onFeedbackChange={async (feedback, correction) => {
-                                          await fetch(`/api/status-changes/${item.statusHistory![0].id}/feedback`, {
-                                            method: "PATCH",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ feedback, correction })
-                                          })
-                                          await refreshItems()
-                                        }}
-                                      />
+                                    {item.notes && (
+                                      <div className="mt-2 text-xs text-slate-600 italic">
+                                        {item.notes}
+                                      </div>
                                     )}
                                   </article>
                                 )}
@@ -452,108 +371,7 @@ export default function WorkflowPage() {
           </div>
         </DragDropContext>
       </div>
-
-      {/* AI Prioritizer Modal */}
-      {showPrioritizer && session && (
-        <AIPrioritizerModal
-          todoItems={todoItems.map(item => ({
-            id: item.id,
-            title: item.title,
-            rawInstructions: item.rawInstructions,
-            swimlane: item.swimlane,
-            priority: item.priority,
-            labels: item.labels,
-            opusId: item.opusId || null,
-            statusChangedAt: item.statusChangedAt,
-            lastProgressAt: null
-          }))}
-          isOpen={showPrioritizer}
-          onClose={() => setShowPrioritizer(false)}
-          onAccept={handleAcceptRecommendation}
-          userId={session.user.id}
-        />
-      )}
-
-      {/* AI Storer Modal */}
-      {showStorer && storerItem && session && storerItem.opusId && (
-        <AIStorerModalWrapper
-          itemId={storerItem.id}
-          opusId={storerItem.opusId}
-          isOpen={showStorer}
-          onClose={() => {
-            setShowStorer(false)
-            setStorerItem(null)
-          }}
-          onIntegrate={() => {
-            refreshItems()
-            setShowStorer(false)
-            setStorerItem(null)
-          }}
-          userId={session.user.id}
-        />
-      )}
     </div>
-  )
-}
-
-// Wrapper component to fetch opus data for Storer modal
-function AIStorerModalWrapper({
-  itemId,
-  opusId,
-  isOpen,
-  onClose,
-  onIntegrate,
-  userId
-}: {
-  itemId: string
-  opusId: string
-  isOpen: boolean
-  onClose: () => void
-  onIntegrate: () => void
-  userId: string
-}) {
-  const [item, setItem] = useState<any>(null)
-  const [opus, setOpus] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (isOpen) {
-      Promise.all([
-        fetch(`/api/items/${itemId}`).then(r => r.json()),
-        fetch(`/api/opuses/${opusId}`).then(r => r.json())
-      ]).then(([itemData, opusData]) => {
-        setItem(itemData)
-        setOpus(opusData)
-        setLoading(false)
-      }).catch(console.error)
-    }
-  }, [isOpen, itemId, opusId])
-
-  if (!isOpen || loading || !item || !opus) return null
-
-  return (
-    <AIStorerModal
-      item={{
-        id: item.id,
-        title: item.title,
-        rawInstructions: item.rawInstructions,
-        routingNotes: item.routingNotes,
-        labels: item.labels || [],
-        cycleCount: item.cycleCount || 0,
-        totalTimeInCreate: item.totalTimeInCreate,
-        wasBlocked: !!item.blockedAt
-      }}
-      opus={{
-        id: opus.id,
-        name: opus.name,
-        content: opus.content,
-        opusType: opus.opusType
-      }}
-      isOpen={isOpen}
-      onClose={onClose}
-      onIntegrate={onIntegrate}
-      userId={userId}
-    />
   )
 }
 

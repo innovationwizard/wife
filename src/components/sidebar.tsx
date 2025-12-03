@@ -4,24 +4,18 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
   PenSquare,
-  Filter,
   Layout as LayoutIcon,
-  Library,
   Home,
   LogOut,
   User,
-  Brain,
-  Settings,
-  Sparkles
+  Heart,
+  Settings
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 
 const navItems = [
   { href: "/capture", label: "Capture", icon: PenSquare },
-  { href: "/clean", label: "Clean", icon: Filter },
   { href: "/workflow", label: "Workflow", icon: LayoutIcon },
-  { href: "/library", label: "Compendium", icon: Library },
-  { href: "/generate", label: "Generate", icon: Sparkles },
   { href: "/", label: "Overview", icon: Home }
 ]
 
@@ -45,15 +39,15 @@ export function Sidebar({ user }: SidebarProps) {
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-white">
       <div className="flex items-center gap-3 px-6 py-5">
-        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
-          <Brain className="h-6 w-6 text-slate-700" strokeWidth={1.5} />
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100">
+          <Heart className="h-6 w-6 text-rose-600" strokeWidth={1.5} />
         </span>
         <div>
           <div className="text-sm font-semibold tracking-wide text-slate-500">
-            OCD
+            Wife App
           </div>
           <div className="text-lg font-semibold text-slate-900">
-            Opus Corpus Documenter
+            Task Management
           </div>
         </div>
       </div>

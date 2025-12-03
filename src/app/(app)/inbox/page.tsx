@@ -113,7 +113,7 @@ export default function InboxPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: "COMPENDIUM",
+          status: "ARCHIVE",
           type: "INFO"
         })
       })
@@ -122,11 +122,8 @@ export default function InboxPage() {
         throw new Error("Failed to archive item")
       }
 
-      // Refetch items from server to get the latest state
-      // This ensures we see all items, including any new ones added while processing
       await fetchItems()
       
-      // Move to next item if available
       const remainingItems = items.filter(item => item.id !== currentItem?.id)
       if (remainingItems.length > 0) {
         setCurrentItemId(remainingItems[0].id)
@@ -140,9 +137,36 @@ export default function InboxPage() {
     }
   }
 
-  function handleActionable() {
+  async function handleActionable() {
     if (!currentItem || submitting) return
-    router.push(`/clean?item=${currentItem.id}`)
+
+    setSubmitting(true)
+    try {
+      const response = await fetch(`/api/items/${currentItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "BACKLOG"
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to move item to workflow")
+      }
+
+      await fetchItems()
+      
+      const remainingItems = items.filter(item => item.id !== currentItem?.id)
+      if (remainingItems.length > 0) {
+        setCurrentItemId(remainingItems[0].id)
+      } else {
+        setCurrentItemId(null)
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleSelectItem(itemId: string) {
@@ -222,7 +246,7 @@ export default function InboxPage() {
                 >
                   No – store as reference
                   <span className="mt-1 block text-xs font-normal text-slate-500">
-                    Send to Compendium as information
+                    Send to Archive as information
                   </span>
                 </button>
                 <button
@@ -231,9 +255,9 @@ export default function InboxPage() {
                   disabled={submitting}
                   className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
                 >
-                  Yes – continue to workflow
+                  Yes – add to workflow
                   <span className="mt-1 block text-xs font-normal text-slate-200">
-                    Move forward to routing
+                    Move to Backlog
                   </span>
                 </button>
               </div>
@@ -305,7 +329,7 @@ export default function InboxPage() {
             </p>
             {items.length === 0 && (
               <p className="text-xs text-amber-600 font-medium">
-                ⚠️ No items in INBOX. Check Workflow page or Compendium to see where items went.
+                ⚠️ No items in INBOX. Check Workflow page or Archive to see where items went.
               </p>
             )}
             <pre className="overflow-auto text-xs text-slate-500 max-h-40">

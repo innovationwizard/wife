@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 
-const title = "OCD – Opus Corpus Documenter"
-const description = "AI-Powered Creative Process Accelerator Engine, from Idea to Completion."
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://opuscorpus.vercel.app"
+const title = "Wife App"
+const description = "Simple task management for you and your family."
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://wife-app.vercel.app"
 const imageUrl = `${baseUrl}/og-image.png`
 const iconUrl = "/favicon-32x32.png"
 
@@ -26,18 +26,18 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "OCD"
+    title: "Wife App"
   },
   openGraph: {
     title,
     description,
-    siteName: "OCD",
+    siteName: "Wife App",
     images: [
       {
         url: imageUrl,
         width: 1200,
         height: 630,
-        alt: "OCD – Opus Corpus Documenter"
+        alt: "Wife App"
       }
     ],
     type: "website"
