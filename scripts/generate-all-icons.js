@@ -84,9 +84,8 @@ async function generateAllIcons() {
   const iconBuffer = await sharp(svgBuffer)
     .resize(600, 600, {
       fit: 'contain',
-      background: { r: 255, g: 255, b: 255, alpha: 1 }
+      background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent for compositing
     })
-    .removeAlpha()
     .png()
     .toBuffer();
   
@@ -103,6 +102,23 @@ async function generateAllIcons() {
     .toFile(ogImagePath);
   
   console.log('✓ Generated og-image.png (1200x630)');
+  
+  // Generate favicon.ico from favicon-32x32.png using ImageMagick
+  console.log('\nGenerating favicon.ico...');
+  const favicon32Path = path.join(publicDir, 'favicon-32x32.png');
+  const faviconIcoPath = path.join(publicDir, 'favicon.ico');
+  
+  // Use ImageMagick convert command (sharp doesn't support ICO)
+  const { execSync } = require('child_process');
+  try {
+    execSync(`convert "${favicon32Path}" "${faviconIcoPath}"`, {
+      stdio: 'inherit'
+    });
+    console.log('✓ Generated favicon.ico');
+  } catch (error) {
+    console.error('Warning: Could not generate favicon.ico. ImageMagick may not be available.');
+    console.error('You can manually convert favicon-32x32.png to favicon.ico');
+  }
   console.log('\nAll icons generated successfully!');
 }
 
