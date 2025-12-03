@@ -19,22 +19,28 @@ async function generateOGImage() {
     }
   });
   
-  // Resize SVG icon to 600x600 (smaller than canvas)
+  // Resize SVG icon to 600x600 (fits within 630px height)
+  // Use white background to ensure no transparency issues
   const iconBuffer = await sharp(svgBuffer)
     .resize(600, 600, {
       fit: 'contain',
-      background: { r: 0, g: 0, b: 0, alpha: 0 }
+      background: { r: 255, g: 255, b: 255, alpha: 1 } // Solid white background
     })
     .png()
     .toBuffer();
   
   // Composite icon on white background
+  // Ensure output has no alpha channel (solid RGB)
   await whiteBackground
     .composite([{
       input: iconBuffer,
       gravity: 'center'
     }])
-    .png()
+    .removeAlpha() // Remove transparency to ensure solid image
+    .png({
+      compressionLevel: 9,
+      quality: 100
+    })
     .toFile(outputPath);
   
   console.log('OG image generated successfully at', outputPath);
