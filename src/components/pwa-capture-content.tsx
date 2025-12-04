@@ -1,12 +1,21 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
 import { CaptureComposer } from "@/components/capture-composer"
 import { AccountabilityView } from "@/components/accountability-view"
 
 export function PWACaptureContent() {
   const [showAccountability, setShowAccountability] = useState(false)
+  const router = useRouter()
+  const { logout } = useAuth()
+
+  function handleSignOut() {
+    logout()
+    router.push("/login")
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -19,19 +28,18 @@ export function PWACaptureContent() {
           <button
             type="button"
             onClick={() => setShowAccountability(!showAccountability)}
-            className="flex items-center gap-2 rounded-md border border-slate-200 px-2 py-1.5 text-xs text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 sm:px-3 sm:text-sm"
+            className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 min-h-[48px] font-medium"
           >
             {showAccountability ? "Command Center" : "Follow Up"}
           </button>
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Sign out</span>
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 min-h-[48px] font-medium"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign out</span>
+          </button>
         </div>
       </header>
 

@@ -1,7 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Clock } from "lucide-react"
+import { useState } from "react"
+import { Clock, Trash2 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useItems, deleteItem } from "@/hooks/useItems"
+import { ItemStatus } from "@prisma/client"
 
 interface AccountabilityItem {
   id: string
@@ -12,50 +15,44 @@ interface AccountabilityItem {
 }
 
 export function AccountabilityView() {
-  const [items, setItems] = useState<AccountabilityItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+  const { items, loading, error, refetch } = useItems({ capturedBy: 'me' })
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  
+  const accountabilityItems: AccountabilityItem[] = items.map(item => ({
+    id: item.id,
+    title: item.title,
+    status: item.status,
+    createdAt: item.createdAt,
+    statusChangedAt: item.statusChangedAt || item.createdAt
+  }))
 
-  useEffect(() => {
-    void fetchItems()
-  }, [])
+  async function handleDelete(itemId: string) {
+    if (!user) return
+    
+    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+      return
+    }
 
-  async function fetchItems() {
-    setLoading(true)
-    setError(null)
+    setDeletingId(itemId)
     try {
-      console.log("[Accountability] Fetching items with capturedBy=me")
-      const response = await fetch("/api/items?capturedBy=me", {
-        cache: "no-store",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      await deleteItem({
+        id: itemId,
+        userId: user.id,
+        userRole: user.role
       })
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-        console.error("[Accountability] Failed to load items:", response.status, errorData)
-        setError(`Failed to load items: ${response.status} ${errorData.error || ""}`)
-        return
+      // Refetch items to update the list
+      if (refetch) {
+        refetch()
+      } else {
+        // If refetch not available, reload the page
+        window.location.reload()
       }
-      
-      const data: AccountabilityItem[] = await response.json()
-      console.log(`[Accountability] Loaded ${data.length} items:`, data)
-      
-      // Ensure all items have statusChangedAt (fallback to createdAt if missing)
-      const validItems = data.map(item => ({
-        ...item,
-        statusChangedAt: item.statusChangedAt || item.createdAt
-      }))
-      
-      console.log(`[Accountability] Setting ${validItems.length} items`)
-      setItems(validItems)
     } catch (error) {
-      console.error("[Accountability] Error fetching items:", error)
-      setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`)
+      console.error('Failed to delete item:', error)
+      alert('Failed to delete item. Please try again.')
     } finally {
-      setLoading(false)
+      setDeletingId(null)
     }
   }
 
@@ -104,7 +101,7 @@ export function AccountabilityView() {
     )
   }
 
-  if (items.length === 0 && !loading) {
+  if (accountabilityItems.length === 0 && !loading) {
     return (
       <div className="space-y-4">
         <header className="space-y-2">
@@ -119,13 +116,6 @@ export function AccountabilityView() {
           {error ? (
             <div className="space-y-2">
               <p className="text-sm text-red-600 font-medium">{error}</p>
-              <button
-                type="button"
-                onClick={() => void fetchItems()}
-                className="mt-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Try again
-              </button>
             </div>
           ) : (
             <p className="text-sm text-slate-500">No items captured yet.</p>
@@ -147,7 +137,7 @@ export function AccountabilityView() {
       </header>
 
       <div className="space-y-3">
-        {items.map((item) => {
+        {accountabilityItems.map((item) => {
           const daysSinceCreation = getDaysSince(item.createdAt)
           const daysInStatus = getDaysInStatus(item.statusChangedAt)
           const formattedStatus = formatStatus(item.status)
@@ -176,6 +166,15 @@ export function AccountabilityView() {
                     </div>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(item.id)}
+                  disabled={deletingId === item.id}
+                  className="flex shrink-0 items-center justify-center rounded-md p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                  title="Delete item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           )

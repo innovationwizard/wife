@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function PasswordForm() {
+  const { user } = useAuth()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -11,6 +13,11 @@ export function PasswordForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!user) {
+      setStatus({ type: "error", message: "You must be logged in to change your password." })
+      return
+    }
 
     if (newPassword !== confirmPassword) {
       setStatus({ type: "error", message: "New passwords do not match." })
@@ -21,10 +28,21 @@ export function PasswordForm() {
     setStatus(null)
 
     try {
-      const response = await fetch("/api/auth/password", {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const functionUrl = `${supabaseUrl}/functions/v1/change-password`
+
+      const response = await fetch(functionUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword })
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          currentPassword,
+          newPassword
+        })
       })
 
       const data = await response.json()

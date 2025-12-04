@@ -1,51 +1,27 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 
 function LoginForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const { login, user } = useAuth()
   const [name, setName] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Redirect based on user role after login
   useEffect(() => {
-    // Check for error in URL (e.g., MissingCSRF from NextAuth)
-    // If error is MissingCSRF, it means login actually succeeded but NextAuth
-    // redirected back with an error. Check if user is logged in and redirect.
-    const urlError = searchParams.get("error")
-    if (urlError === "MissingCSRF") {
-      // Clear the error from URL
-      if (typeof window !== "undefined") {
-        window.history.replaceState({}, "", "/login")
-      }
-      
-      // Check if user is actually logged in (login succeeded despite the error)
-      fetch("/api/auth/session", { cache: "no-store" })
-        .then((res) => res.json())
-        .then((session) => {
-          if (session?.user) {
-            // User is logged in - redirect based on role
-            if (session.user.role === "STAKEHOLDER") {
-              router.push("/pwa/capture")
-            } else {
-              router.push("/")
-            }
-          }
-        })
-        .catch(() => {
-          // If session check fails, just leave them on login page
-        })
-    } else if (urlError) {
-      setError("An error occurred. Please try again.")
-      if (typeof window !== "undefined") {
-        window.history.replaceState({}, "", "/login")
+    if (user) {
+      if (user.role === "WIFE") {
+        router.push("/pwa/capture")
+      } else {
+        router.push("/")
       }
     }
-  }, [searchParams, router])
+  }, [user, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,44 +29,16 @@ function LoginForm() {
     setIsSubmitting(true)
 
     try {
-      // Determine redirect URL based on user role
-      // We'll get the session after sign-in to determine where to redirect
-      const result = await signIn("credentials", {
-        name,
-        password,
-        redirect: false,
-        callbackUrl: "/", // Default, we'll override after checking session
-      })
+      const success = await login(name, password)
 
-      if (result?.error) {
-        if (result.error === "CredentialsSignin") {
-          setError("Invalid name or password")
-        } else if (result.error === "MissingCSRF") {
-          // This shouldn't happen, but if it does, try again
-          setError("Security error: Please try again.")
-        } else {
-          setError("Login failed. Please try again.")
-        }
-      } else if (result?.ok) {
-        // Success - get session to determine redirect
-        const sessionResponse = await fetch("/api/auth/session", {
-          cache: "no-store",
-        })
-        const session = await sessionResponse.json()
-
-        // Redirect based on user role
-        if (session?.user?.role === "STAKEHOLDER") {
-          router.push("/pwa/capture")
-        } else {
-          router.push("/")
-        }
-        // Don't set isSubmitting to false here since we're redirecting
-        return
+      if (!success) {
+        setError("Invalid name or password")
+        setIsSubmitting(false)
       }
+      // Don't redirect here - let the useEffect handle it when user is set
     } catch (err) {
       console.error("Login error:", err)
       setError("An unexpected error occurred. Please try again.")
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -118,7 +66,7 @@ function LoginForm() {
               placeholder="Name"
               autoComplete="username"
               required
-              className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300"
+              className="appearance-none rounded relative block w-full px-4 py-3 border border-gray-300 text-base min-h-[48px]"
             />
             <input
               type="password"
@@ -127,13 +75,13 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
-              className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300"
+              className="appearance-none rounded relative block w-full px-4 py-3 border border-gray-300 text-base min-h-[48px]"
             />
           </div>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] text-base font-medium"
           >
             {isSubmitting ? "Logging in..." : "Log In"}
           </button>

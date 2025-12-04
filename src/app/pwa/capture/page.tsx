@@ -1,14 +1,13 @@
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
+"use client"
+
+import { AuthGuard } from "@/components/AuthGuard"
 import { PWACaptureContent } from "@/components/pwa-capture-content"
 
-export default async function PWACapturePage() {
-  const session = await auth()
-
-  if (!session) {
-    redirect("/login")
-  }
-
-  return <PWACaptureContent />
+export default function PWACapturePage() {
+  return (
+    <AuthGuard>
+      <PWACaptureContent />
+    </AuthGuard>
+  )
 }
 

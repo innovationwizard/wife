@@ -14,7 +14,7 @@ It belongs to Wife App and is essential for app store submission planning.
 
 ## Overview
 
-Wife App is a task management tool focused on the stakeholder capture feature. The promotional angle: **"Stop nagging. Start tracking."**
+Wife App is a task management tool focused on the wife capture feature. The promotional angle: **"Stop nagging. Start tracking."**
 
 This roadmap will guide you through converting your existing Next.js PWA into native iOS and Android apps and submitting them to both app stores.
 
@@ -138,7 +138,7 @@ npx capacitor-assets generate --iconBackgroundColor '#ffffff' --ios --android
 - Dimensions: 1080 x 1920 px minimum
 
 **Key screens to capture:**
-1. Stakeholder capture interface (voice + text)
+1. Wife capture interface (voice + text)
 2. Accountability view (task tracking)
 3. Creator workflow/Kanban board
 4. A completed task with checkmark
@@ -153,7 +153,7 @@ npx capacitor-assets generate --iconBackgroundColor '#ffffff' --ios --android
 ```
 Wife App makes household task management effortless.
 
-FOR STAKEHOLDERS:
+FOR WIVES:
 • Capture tasks with voice or text
 • Assign to your partner instantly
 • Track progress without asking "Is it done yet?"
@@ -312,7 +312,7 @@ In App Store Connect:
 - Demo account (if login required):
   - Username: condor
   - Password: x
-  - Notes: "This is the creator account. Stakeholder account: estefani / 2122"
+  - Notes: "This is the creator account. Wife account: estefani / 2122"
 
 ### 5.5 Submit for Review
 1. Click "Add for Review"
@@ -457,7 +457,7 @@ Add basic analytics to track:
 
 **Month 1 priorities:**
 - Push notifications (when task status changes)
-- In-app messaging between stakeholder and creator
+- In-app messaging between wife and creator
 - Task templates (common household chores)
 
 ---

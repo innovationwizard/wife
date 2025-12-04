@@ -119,4 +119,30 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Touch optimization */
+  button,
+  a[href],
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ensure minimum tap target size */
+  button,
+  a[href],
+  [role="button"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Allow smaller tap targets for icons if they have padding */
+  button:has(svg:only-child),
+  a[href]:has(svg:only-child) {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

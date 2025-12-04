@@ -9,7 +9,7 @@ BEGIN;
 -- Enums
 -- ============================================================================
 
-CREATE TYPE "Role" AS ENUM ('CREATOR', 'STAKEHOLDER');
+CREATE TYPE "Role" AS ENUM ('HUSBAND', 'WIFE');
 CREATE TYPE "ItemType" AS ENUM ('TASK', 'INFO');
 CREATE TYPE "ItemStatus" AS ENUM (
   'INBOX',
@@ -34,7 +34,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'CREATOR',
+    "role" "Role" NOT NULL DEFAULT 'HUSBAND',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")

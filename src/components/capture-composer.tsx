@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { createItem } from "@/hooks/useItems"
 
 type QueueItem = {
   id: string
@@ -69,6 +71,7 @@ interface CaptureComposerProps {
 }
 
 export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
+  const { user } = useAuth()
   const [input, setInput] = useState("")
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [isOnline, setIsOnline] = useState(
@@ -135,17 +138,15 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
         if (!entry) continue
 
         try {
-          const response = await fetch("/api/items", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: entry.content })
-          })
-
-          if (!response.ok) {
-            console.warn(`Failed to sync item ${entry.id}:`, response.statusText)
-            // Continue with next item instead of stopping
+          if (!user) {
+            console.warn(`Cannot sync item ${entry.id}: user not logged in`)
             continue
           }
+
+          await createItem({
+            user,
+            content: entry.content
+          })
 
           // Mark as synced only on success
           syncedIds.add(entry.id)
@@ -641,7 +642,7 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerLeave}
-          className={buttonClasses}
+          className={`${buttonClasses} min-h-[48px]`}
         >
           {isRecording
             ? "Listening…"
@@ -664,7 +665,7 @@ export function CaptureComposer({ variant = "full" }: CaptureComposerProps) {
           <button
             type="button"
             onClick={handleClear}
-            className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+            className="w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 min-h-[48px]"
           >
             Clear
           </button>

@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
+import { useItems, updateItem } from "@/hooks/useItems"
+import { ItemStatus } from "@prisma/client"
 
 interface InboxItem {
   id: string
@@ -15,89 +18,26 @@ interface InboxItem {
 
 export default function InboxPage() {
   const router = useRouter()
-  const [items, setItems] = useState<InboxItem[]>([])
+  const { user } = useAuth()
+  const { items: fetchedItems, loading: itemsLoading } = useItems({ status: ItemStatus.INBOX })
   const [currentItemId, setCurrentItemId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const itemsRef = useRef<InboxItem[]>([])
+  
+  const items: InboxItem[] = fetchedItems.map(item => ({
+    id: item.id,
+    title: item.title,
+    rawInstructions: item.rawInstructions,
+    createdAt: item.createdAt,
+    capturedBy: item.capturedBy
+  }))
 
-  // Keep ref in sync with state
   useEffect(() => {
-    itemsRef.current = items
-  }, [items])
-
-  useEffect(() => {
-    void fetchItems(false) // Initial load with loading state
-    
-    // Poll for new items every 5 seconds (silent refresh)
-    const interval = setInterval(() => {
-      void fetchItems(true) // Silent refresh - no loading state
-    }, 5000)
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  async function fetchItems(silent = false) {
-    if (!silent) {
-      setLoading(true)
+    if (items.length > 0 && !currentItemId) {
+      setCurrentItemId(items[0].id)
     }
-    try {
-      const response = await fetch("/api/items?status=INBOX", {
-        cache: "no-store"
-      })
-      if (!response.ok) {
-        throw new Error("Failed to load inbox")
-      }
-      const data: InboxItem[] = await response.json()
-      
-      if (!silent) {
-        console.log(`[Inbox] Fetched ${data.length} items from server`)
-        console.log(`[Inbox] All items:`, data.map(item => ({
-          id: item.id,
-          title: item.title,
-          capturedBy: item.capturedBy?.name,
-          createdAt: item.createdAt,
-          status: 'INBOX' // All items should be INBOX since we filter by status=INBOX
-        })))
-        
-        if (data.length === 0) {
-          console.warn(`[Inbox] No items found! This might indicate items were processed or there's a query issue.`)
-        } else if (data.length === 1) {
-          console.warn(`[Inbox] Only 1 item found. If more were captured, they may have been processed or there's a filtering issue.`)
-        }
-      }
-      
-      // Check if new items were added using ref to avoid stale closure
-      const previousItemIds = new Set(itemsRef.current.map(item => item.id))
-      const newItems = data.filter(item => !previousItemIds.has(item.id))
-      
-      if (newItems.length > 0) {
-        console.log(`[Inbox] ${newItems.length} new item(s) detected:`, newItems.map(item => item.title))
-      }
-      
-      setItems(data)
-      
-      // Set the first item as current if no current item is selected
-      setCurrentItemId((prevId) => {
-        if (data.length > 0 && !prevId) {
-          return data[0].id
-        }
-        // If current item is no longer in the list, reset to first item
-        if (prevId && !data.find(item => item.id === prevId)) {
-          return data.length > 0 ? data[0].id : null
-        }
-        return prevId
-      })
-    } catch (error) {
-      if (!silent) {
-        console.error("[Inbox] Error fetching items:", error)
-      }
-    } finally {
-      if (!silent) {
-        setLoading(false)
-      }
-    }
-  }
+  }, [items, currentItemId])
+
+  const loading = itemsLoading
 
   const currentItem = useMemo(() => {
     if (!currentItemId) return items[0] ?? null
@@ -105,24 +45,18 @@ export default function InboxPage() {
   }, [items, currentItemId])
 
   async function handleNotActionable() {
-    if (!currentItem || submitting) return
+    if (!currentItem || submitting || !user) return
 
     setSubmitting(true)
     try {
-      const response = await fetch(`/api/items/${currentItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "ARCHIVE",
-          type: "INFO"
-        })
+      await updateItem({
+        id: currentItem.id,
+        userId: user.id,
+        data: {
+          status: ItemStatus.ARCHIVE,
+          type: 'INFO'
+        }
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to archive item")
-      }
-
-      await fetchItems()
       
       const remainingItems = items.filter(item => item.id !== currentItem?.id)
       if (remainingItems.length > 0) {
@@ -138,23 +72,17 @@ export default function InboxPage() {
   }
 
   async function handleActionable() {
-    if (!currentItem || submitting) return
+    if (!currentItem || submitting || !user) return
 
     setSubmitting(true)
     try {
-      const response = await fetch(`/api/items/${currentItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "BACKLOG"
-        })
+      await updateItem({
+        id: currentItem.id,
+        userId: user.id,
+        data: {
+          status: ItemStatus.BACKLOG
+        }
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to move item to workflow")
-      }
-
-      await fetchItems()
       
       const remainingItems = items.filter(item => item.id !== currentItem?.id)
       if (remainingItems.length > 0) {
@@ -196,7 +124,7 @@ export default function InboxPage() {
     )
   }
 
-  const capturedByLabel = currentItem.capturedBy?.name ?? "Creator"
+  const capturedByLabel = currentItem.capturedBy?.name ?? "Husband"
   const createdAt = new Date(currentItem.createdAt).toLocaleString()
 
   return (
@@ -273,7 +201,7 @@ export default function InboxPage() {
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {items.map((item, index) => {
                 const isCurrent = item.id === currentItemId
-                const capturedByLabel = item.capturedBy?.name ?? "Creator"
+                const capturedByLabel = item.capturedBy?.name ?? "Husband"
                 const createdAt = new Date(item.createdAt).toLocaleString()
                 
                 return (
@@ -281,10 +209,10 @@ export default function InboxPage() {
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectItem(item.id)}
-                    className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                    className={`w-full rounded-lg border p-4 text-left transition-colors min-h-[80px] ${
                       isCurrent
                         ? "border-slate-400 bg-white shadow-sm ring-2 ring-slate-300"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -365,10 +293,9 @@ function AllItemsDiagnostic() {
   async function fetchAllItems() {
     setLoading(true)
     try {
-      const response = await fetch("/api/items", { cache: "no-store" })
-      if (!response.ok) return
-      const data = await response.json()
-      setAllItems(data)
+      // This function is no longer needed - items are fetched via useItems hook
+      // Keeping stub for compatibility
+      setAllItems([])
     } catch (error) {
       console.error("Failed to fetch all items", error)
     } finally {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import {
   DragDropContext,
   Droppable,
@@ -8,21 +8,9 @@ import {
   type DropResult
 } from "@hello-pangea/dnd"
 import { AlertTriangle, Clock } from "lucide-react"
-
-interface Item {
-  id: string
-  humanId: string
-  title: string
-  rawInstructions: string
-  notes?: string | null
-  status: string
-  priority: "HIGH" | "MEDIUM" | "LOW"
-  swimlane: string
-  labels: string[]
-  createdAt: string
-  statusChangedAt: string
-  order: number | null
-}
+import { useAuth } from "@/contexts/AuthContext"
+import { useItems, updateItem, Item } from "@/hooks/useItems"
+import { ItemStatus, Swimlane } from "@prisma/client"
 
 interface ColumnConfig {
   title: string
@@ -51,26 +39,23 @@ const PRIORITY_BORDERS = {
 }
 
 export default function WorkflowPage() {
-  const [items, setItems] = useState<Item[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const { items: fetchedItems, loading } = useItems()
   const [dragError, setDragError] = useState("")
+  const [localItems, setLocalItems] = useState<Item[]>([])
 
+  // Filter items to only workflow statuses
+  const workflowStatuses: ItemStatus[] = [ItemStatus.BACKLOG, ItemStatus.TODO, ItemStatus.DOING, ItemStatus.IN_REVIEW, ItemStatus.BLOCKED, ItemStatus.DONE]
+  const filteredItems = fetchedItems.filter(item => workflowStatuses.includes(item.status))
+  
+  // Sync local items with fetched items
   useEffect(() => {
-    refreshItems()
-  }, [])
-
-  async function refreshItems() {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/workflow/items")
-      const data: Item[] = await response.json()
-      setItems(data)
-    } catch (error) {
-      console.error("Failed to fetch workflow items", error)
-    } finally {
-      setLoading(false)
+    if (filteredItems.length > 0) {
+      setLocalItems(filteredItems)
     }
-  }
+  }, [filteredItems])
+  
+  const items = localItems.length > 0 ? localItems : filteredItems
 
   function daysSince(date: string) {
     const delta = Date.now() - new Date(date).getTime()
@@ -98,13 +83,14 @@ export default function WorkflowPage() {
       }
       
       // Neither has order - fallback to priority and date sorting
-      const priorityOrder: Record<Item["priority"], number> = {
+      const priorityOrder: Record<string, number> = {
         HIGH: 0,
         MEDIUM: 1,
         LOW: 2
       }
-      const priorityDiff =
-        priorityOrder[a.priority] - priorityOrder[b.priority]
+      const aPriority = a.priority || 'LOW'
+      const bPriority = b.priority || 'LOW'
+      const priorityDiff = priorityOrder[aPriority] - priorityOrder[bPriority]
       if (priorityDiff !== 0) return priorityDiff
       return (
         new Date(a.statusChangedAt).getTime() -
@@ -142,7 +128,7 @@ export default function WorkflowPage() {
       reordered.splice(destIndex, 0, removed)
 
       // Update local state optimistically
-      setItems((prev) => {
+      setLocalItems((prev) => {
         const otherItems = prev.filter(
           (entry) => !(entry.status === sourceStatus && entry.swimlane === sourceSwimlane)
         )
@@ -150,19 +136,19 @@ export default function WorkflowPage() {
       })
 
       // Persist order to database - update all items in this column/swimlane
+      if (!user) return
+      
       try {
         const updatePromises = reordered.map((item, index) =>
-          fetch(`/api/items/${item.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ order: index })
+          updateItem({
+            id: item.id,
+            userId: user.id,
+            data: { order: index }
           })
         )
         await Promise.all(updatePromises)
       } catch (error) {
         console.error("Failed to persist order", error)
-        // Refresh on error to get correct state
-        await refreshItems()
       }
 
       return
@@ -193,13 +179,16 @@ export default function WorkflowPage() {
       }
     }
 
-    setItems((prev) =>
+    if (!user) return
+
+    // Optimistically update UI
+    setLocalItems((prev) =>
       prev.map((entry) =>
         entry.id === draggableId
           ? {
               ...entry,
-              status: nextStatus,
-              swimlane: destSwimlane as Item["swimlane"],
+              status: nextStatus as ItemStatus,
+              swimlane: destSwimlane as Swimlane,
               statusChangedAt: new Date().toISOString(),
               order: null // Clear order when moving between columns
             }
@@ -208,30 +197,22 @@ export default function WorkflowPage() {
     )
 
     try {
-      const response = await fetch(`/api/items/${draggableId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          status: nextStatus,
-          swimlane: destSwimlane,
+      await updateItem({
+        id: draggableId,
+        userId: user.id,
+        data: { 
+          status: nextStatus as ItemStatus,
+          swimlane: destSwimlane as Swimlane,
           order: null // Clear order when moving between columns
-        })
+        }
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
-        console.error("[Workflow] Failed to update item:", response.status, errorData)
-        setDragError(`Failed to move item: ${errorData.error || "Unknown error"}`)
-        setTimeout(() => setDragError(""), 3000)
-        await refreshItems()
-      } else {
-        console.log("[Workflow] Successfully moved item to", nextStatus)
-      }
+      console.log("[Workflow] Successfully moved item to", nextStatus)
     } catch (error) {
       console.error("[Workflow] Failed to update item", error)
       setDragError("Failed to move item. Please try again.")
       setTimeout(() => setDragError(""), 3000)
-      await refreshItems()
+      // Revert optimistic update on error
+      setLocalItems(filteredItems)
     }
   }
 
@@ -316,7 +297,7 @@ export default function WorkflowPage() {
                                     {...dragProvided.dragHandleProps}
                                     className={[
                                       "mb-2 rounded-md border-l-4 bg-white p-3 shadow-sm",
-                                      PRIORITY_BORDERS[item.priority],
+                                      PRIORITY_BORDERS[item.priority || 'LOW'],
                                       dragSnapshot.isDragging
                                         ? "shadow-lg"
                                         : "",
@@ -338,7 +319,7 @@ export default function WorkflowPage() {
                                         </span>
                                       </span>
                                     </div>
-                                    {item.labels.length > 0 && (
+                                    {item.labels && item.labels.length > 0 && (
                                       <div className="mt-3 flex flex-wrap gap-2">
                                         {item.labels.map((label) => (
                                           <span

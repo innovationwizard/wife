@@ -4,10 +4,10 @@ Simple task management for couples and families. Stop nagging. Start tracking.
 
 ## Features
 
-- **PWA Capture Interface** - Stakeholders can capture tasks via voice or text from anywhere
+- **PWA Capture Interface** - Wives can capture tasks via voice or text from anywhere
 - **Accountability View** - Track task progress, time since assigned, completion status
 - **Full Kanban Workflow** - 6 columns (Backlog, To Do, Doing, In Review, Blocked, Done) with swimlanes and WIP limits
-- **Role-Based Auth** - CREATOR and STAKEHOLDER roles
+- **Role-Based Auth** - CREATOR and WIFE roles
 - **Offline-First** - Works without internet, syncs when online
 
 ## Getting Started
