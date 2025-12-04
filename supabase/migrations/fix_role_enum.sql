@@ -1,16 +1,17 @@
 -- Fix Role enum to match Prisma schema
 -- Run this in Supabase SQL Editor
 
--- First, check if STAKEHOLDER exists and rename it to WIFE
+-- Legacy cleanup: If STAKEHOLDER exists (from old schema), rename it to WIFE
+-- This is a one-time migration for databases that had the old STAKEHOLDER enum value
 DO $$
 BEGIN
-  -- Check if STAKEHOLDER value exists
+  -- Check if STAKEHOLDER value exists (legacy)
   IF EXISTS (
     SELECT 1 FROM pg_enum 
     WHERE enumlabel = 'STAKEHOLDER' 
     AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'Role')
   ) THEN
-    -- Rename STAKEHOLDER to WIFE
+    -- Rename legacy STAKEHOLDER to WIFE
     ALTER TYPE "Role" RENAME VALUE 'STAKEHOLDER' TO 'WIFE';
   END IF;
   

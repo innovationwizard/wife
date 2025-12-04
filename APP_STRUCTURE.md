@@ -78,8 +78,7 @@ wife/
 │   │   │   ├── workflow/
 │   │   │   └── page.tsx        # Dashboard/home
 │   │   ├── login/              # Authentication pages
-│   │   │   ├── creator/
-│   │   │   ├── stakeholder/
+│   │   │   ├── husband/
 │   │   │   └── wife/
 │   │   ├── pwa/                # PWA-specific routes
 │   │   │   ├── capture/
@@ -144,7 +143,7 @@ wife/
 **Authentication Routes (`/app/login/`):**
 - `/login` - Main login page
 - `/login/creator` - Creator-specific login
-- `/login/stakeholder` - Stakeholder login
+- `/login/wife` - Wife login
 - `/login/wife` - Wife-specific login
 
 **PWA Routes (`/app/pwa/`):**
